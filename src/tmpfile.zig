@@ -302,7 +302,7 @@ pub inline fn tmpFileOwned(args: struct {
 }) !*TmpFile {
     const allocator = if (builtin.is_test) std.testing.allocator else std.heap.page_allocator;
     const tmp_file = try allocator.create(TmpFile);
-    tmp_file.* = try TmpFile.init(allocator, .{
+    tmp_file.* = try tmpFile(.{
         .tmp_dir = args.tmp_dir,
         .prefix = args.prefix,
         .dir_prefix = args.dir_prefix,
@@ -355,5 +355,20 @@ test "Tmp" {
         read_count = try tmp_file2.f.readAll(&buf);
         try testing.expectEqual(read_count, "hello, world!2".len);
         try testing.expectEqualSlices(u8, buf[0..read_count], "hello, world!2");
+    }
+
+    {
+        var tmp_file = try ThisModule.tmpFileOwned(.{});
+        defer {
+            tmp_file.deinit();
+            tmp_file.allocator.destroy(tmp_file);
+        }
+
+        try tmp_file.f.writeAll("hello, world!");
+        try tmp_file.f.seekTo(0);
+        var buf: [4096]u8 = undefined;
+        const read_count = try tmp_file.f.readAll(&buf);
+        try testing.expectEqual(read_count, "hello, world!".len);
+        try testing.expectEqualSlices(u8, buf[0..read_count], "hello, world!");
     }
 }
