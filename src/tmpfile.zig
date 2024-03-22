@@ -166,6 +166,7 @@ pub const TmpFile = struct {
     /// sub_path is slice of abs_path
     sub_path: []const u8,
     f: std.fs.File,
+    fclosed: bool,
 
     /// caution: this deinit only clears mem resources, will not close file or delete tmp files & tmp_dir
     /// need manually close file, and clean them with tmp_dir
@@ -187,8 +188,11 @@ pub const TmpFile = struct {
 
     /// This method only close file handles, will not release the path resources
     pub fn close(self: *TmpFile) void {
-        self.f.close();
-        self.f = undefined;
+        if (!self.fclosed) {
+            self.f.close();
+            self.f = undefined;
+            self.fclosed = true;
+        }
     }
 
     /// return a TmpFile created in tmp dir in sys temp dir. Tmp dir must be provided in args. If do not want to provide
@@ -233,6 +237,7 @@ pub const TmpFile = struct {
             .dir_path = dir_path,
             .sub_path = sub_path,
             .f = tmp_file,
+            .fclosed = false,
         };
     }
 
@@ -370,5 +375,16 @@ test "Tmp" {
         const read_count = try tmp_file.f.readAll(&buf);
         try testing.expectEqual(read_count, "hello, world!".len);
         try testing.expectEqualSlices(u8, buf[0..read_count], "hello, world!");
+    }
+
+    {
+        // close file handle and later deinit should work too
+        var tmp_file = try ThisModule.tmpFile(.{});
+        defer {
+            tmp_file.deinit();
+        }
+
+        try tmp_file.f.writeAll("hello, world!");
+        tmp_file.close();
     }
 }
