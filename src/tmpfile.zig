@@ -10,7 +10,7 @@ const random_path_len = std.fs.base64_encoder.calcSize(random_bytes_count);
 /// return the sys temp dir as string. The return string is owned by user
 pub fn getSysTmpDir(a: std.mem.Allocator) ![]const u8 {
     const Impl = switch (builtin.os.tag) {
-        .linux, .macos => struct {
+        .linux, .macos, .freebsd, .netbsd, .openbsd => struct {
             pub fn get(allocator: std.mem.Allocator) ![]const u8 {
                 // cpp17's temp_directory_path gives good reference
                 // https://en.cppreference.com/w/cpp/filesystem/temp_directory_path
@@ -108,7 +108,7 @@ pub const TmpDir = struct {
                 sys_tmp_dir_path,
                 sepbrk: {
                     switch (builtin.os.tag) {
-                        .linux, .macos => break :sepbrk std.fs.path.sep_posix,
+                        .linux, .macos, .freebsd, .netbsd, .openbsd => break :sepbrk std.fs.path.sep_posix,
                         .windows => break :sepbrk std.fs.path.sep_windows,
                         else => {
                             @compileError("Not support, os=" ++ @tagName(builtin.os.tag));
@@ -211,7 +211,7 @@ pub const TmpFile = struct {
                 args.tmp_dir.abs_path,
                 sepbrk: {
                     switch (builtin.os.tag) {
-                        .linux, .macos => break :sepbrk std.fs.path.sep_posix,
+                        .linux, .macos, .freebsd, .netbsd, .openbsd => break :sepbrk std.fs.path.sep_posix,
                         .windows => break :sepbrk std.fs.path.sep_windows,
                         else => {
                             @compileError("Not support, os=" ++ @tagName(builtin.os.tag));
